@@ -1,0 +1,22 @@
+Package: mxit
+Type: Package
+Title: MultipleXed Imaging Tools
+Version: 0.1.0
+Author: person(c('Simon', 'N'), 'Vandekar', role='aut') person(c('Coleman'), 'Harris', role='aut')
+Maintainer: The package maintainer <yourself@somewhere.net>
+Description: Preprocessing and analysis tools for multiplex image analysis for single cell imaging data.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Depends: R (>= 3.3)
+Collate:
+  'fitmix.R'
+Imports:
+  ANTsRCore,
+  mixtools,
+  parallel,
+  raster
+RoxygenNote: 6.1.1
+Suggests:
+  knitr,
+  rmarkdown
