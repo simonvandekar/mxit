@@ -1,4 +1,4 @@
-#' Computes Statistical Map for Neuroimaging Data
+#' Fits a mixture model on an array of images
 #'
 #' This function computes a k component gamma mixture model marginally for each channel and returns a mixfit object to perform image normalization using the XX function.
 #' @param image Required character vector of image locations or raster object.
@@ -14,7 +14,6 @@
 #' @keywords gamma mixture model
 #' @return Returns a mixfit object with the following values:
 #' @importFrom raster raster stack
-#' @importFrom ANTsRCore n4BiasFieldCorrection
 #' @importFrom mixtools gammamixEM
 #' @importFrom parallel mclapply
 #' @export

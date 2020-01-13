@@ -11,6 +11,7 @@ LazyData: true
 Depends: R (>= 3.3)
 Collate:
   'fitmix.R'
+  'biasCorrect.R'
 Imports:
   ANTsRCore,
   mixtools,

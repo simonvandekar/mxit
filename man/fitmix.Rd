@@ -2,7 +2,7 @@
 % Please edit documentation in R/fitmix.R
 \name{fitmix}
 \alias{fitmix}
-\title{Computes Statistical Map for Neuroimaging Data}
+\title{Fits a mixture model on an array of images}
 \usage{
 fitmix(image, mask, lambda = NULL, k = 3, alpha = c(0.333, 3.33,
   33.3), beta = c(c(0.222, 2.22, 22.2)),
