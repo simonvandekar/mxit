@@ -17,9 +17,17 @@ biasCorrect = function(image, mask, splineParam=2000, mc.cores=getOption("mc.cor
   if(all(is.character(image))) image = raster::stack(image)
   # will error if multiple masks are passed
   if(!missing(mask) & all(is.character(mask))) mask = raster::raster(mask)
-  out = mclapply(as.list(image), function(img){
-    n4BiasFieldCorrection(img=as.antsImage(as.matrix(img)), mask=mask, splineParam = splineParam, ...)
-  }, mc.cores=mc.cores)
+  # out = mclapply(as.list(image), function(img){
+  #   n4BiasFieldCorrection(img=as.antsImage(as.matrix(img)), 
+  #                         mask=as.antsImage(as.matrix(mask)), 
+  #                         splineParam = splineParam, ...)
+  # }, mc.cores=mc.cores)
+  
+  out = lapply(as.list(image), function(img){
+    n4BiasFieldCorrection(img=as.antsImage(as.matrix(img)), 
+                          mask=as.antsImage(as.matrix(mask)), 
+                          splineParam = splineParam)
+  })
   lapply(out, as.raster)
   stack(out)
 }
