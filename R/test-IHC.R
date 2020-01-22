@@ -6,6 +6,8 @@
 
 ## ---- DATA
 
+## use other images (original)
+
 ## access to all images
 # path.all = "~/Box/multiplex/MxIF\ Data/H051_Ileum_H_1/AFRemoved"
 # imgs.all = list.files(path.all,pattern="tif$",full.names = TRUE,recursive = TRUE)
@@ -38,25 +40,39 @@ source("plotDensity.R")
 ## ----- ALL TEST IMAGES
 
 imgs = list() ## list to hold all results
+img_deltas = list()
 
 ## loop through imgs.test
 for(i in 1:length(imgs.test)){
   ## bias correct all images
-  bc_img = biasCorrect(imgs.test[i],
-                       masks.test[i])
   
-  ## calculate image density on original images
-  orig_dens = imageDensity(imgs.test[i],
-                           masks.test[i])
+  # ## calculate image density on original images
+  # orig_dens = imageDensity(imgs.test[i],
+  #                          masks.test[i])
+  # 
+  # ## calculate image density on bias-corrected images
+  # bc_dens = imageDensity(bc_img,
+  #                          masks.test[i],
+  #                          bias_corrected = TRUE)
   
-  ## calculate image density on bias-corrected images
-  bc_dens = imageDensity(bc_img,
-                           masks.test[i], #adjusted mask?
-                           bias_corrected = TRUE)
+  # imgs = list(imgs,
+  #             orig_dens,
+  #             bc_dens)
   
-  imgs = list(imgs,
-              orig_dens,
-              bc_dens)
+  #find deltas
+  img_bc = biasCorrect(imgs.test[i],
+                       masks.test[i],
+                       simple=TRUE,
+                       splineParam = 5000)
+  
+  img_og = raster(as.matrix(raster(imgs.test[i])))
+  name_var = stringr::str_extract(imgs.test[i],"[ \\w-]+?(?=\\.)")
+  
+  img_del = img_og - img_bc
+  writeRaster(img_bc, paste0("../test-results/",name_var,"_bias_correct.tif"))
+  writeRaster(img_del, paste0("../test-results/",name_var,"_delta.tif"))
+  img_deltas = list(img_deltas,
+                    img_del)
 }
 
 ## plot density comparison
@@ -86,10 +102,41 @@ i1 = imgs.test[1]
 m1 = masks.test[1]
 splineParam=2000
 
-image = raster::stack(i1)
-mask = raster::raster(m1)
-out = n4BiasFieldCorrection(img=as.antsImage(as.matrix(image)), 
-                            mask=as.antsImage(as.matrix(mask)), 
+
+out = n4BiasFieldCorrection(img=imgs.test[1], 
+                            mask=masks.test[1], 
                             splineParam = splineParam)
+out = as.matrix(out)
+out = out/max(out)
+out = t(out)
+tiff::writeTIFF(out,"b1p.tif")
+
+out = as.matrix(out)
+out = t(out)
+out = round(out)
+out1 = raster::raster(out)
+writeRaster(out1, "raster3.tif")
+rm(out); rm(out1)
+
+
+## delta image
+r_bc = raster(as.matrix(raster("raster3.tif")))
+r_og = raster(as.matrix(raster(imgs.test[1])))
+r_del = r_og - r_bc
+
+## MIXTURE MODELS
+## log transform -> gaussianmmixture model
+## untransformed -> gamma mixture model
 ## ERROR
 ## Requested region is (at least partially) outside the largest possible region.
+
+##testing biasCorrect
+
+# a1 = biasCorrect(imgs.test[1],
+#                  masks.test[1])
+# a2 = biasCorrect(list(raster(imgs.test[1])),
+#                  raster(masks.test[1]))
+# # b1 = biasCorrect(imgs.test[1:3],
+# #                  masks.test[1])
+# # b2 = biasCorrect(lapply(imgs.test[1:3], function(img) raster(img)),
+# #                  masks.test[1])

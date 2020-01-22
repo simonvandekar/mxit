@@ -2,7 +2,7 @@
 #'
 #' Adjusts for slow frequency fluctuations in image intensities, i.e. field bias in MRI.
 #' This function computes a k component gamma mixture model marginally for each channel and returns a mixfit object to perform image normalization using the XX function.
-#' @param image Required character vector of image locations or raster object.
+#' @param image Required list of image locations or raster objects.
 #' @param mask Required character vector of image location or raster object of the tissue mask.
 #' @param splineParam Controls smoothness of bias field. Argument passed to ANTsRCore::n4BiasFieldCorrection.
 #' @param mc.cores Number of cores to use for parallel things.
@@ -13,21 +13,45 @@
 #' @importFrom ANTsRCore as.antsImage n4BiasFieldCorrection
 #' @importFrom parallel mclapply
 #' @export
-biasCorrect = function(image, mask, splineParam=2000, mc.cores=getOption("mc.cores", 2L), ...){
-  if(all(is.character(image))) image = raster::stack(image)
-  # will error if multiple masks are passed
-  if(!missing(mask) & all(is.character(mask))) mask = raster::raster(mask)
-  # out = mclapply(as.list(image), function(img){
-  #   n4BiasFieldCorrection(img=as.antsImage(as.matrix(img)), 
-  #                         mask=as.antsImage(as.matrix(mask)), 
-  #                         splineParam = splineParam, ...)
-  # }, mc.cores=mc.cores)
+biasCorrect = function(image, 
+                       mask, 
+                       splineParam=2000, 
+                       mc.cores=getOption("mc.cores", 2L), 
+                       simple=FALSE,
+                       ...){
+  if(simple){
+    out = n4BiasFieldCorrection(img=image,
+                                mask=mask,
+                                splineParam = splineParam)
+    return(raster(t(as.matrix(out))))
+  }
   
-  out = lapply(as.list(image), function(img){
-    n4BiasFieldCorrection(img=as.antsImage(as.matrix(img)), 
-                          mask=as.antsImage(as.matrix(mask)), 
+  ## if not file location strings, setup ANTS images
+  if(!all(is.character(image[[1]]))){
+    image = lapply(image, function(img){
+      as.antsImage(as.matrix(img))
+    })
+  }
+  
+  if(!missing(mask) & #will error if multiple masks are passed
+     !all(is.character(mask))){
+    mask = as.antsImage(as.matrix(mask))
+  }
+  
+  ## apply bias correction
+  out = mclapply(image, function(img){
+    n4BiasFieldCorrection(img=img,
+                          mask=mask,
                           splineParam = splineParam)
+  }, mc.cores=mc.cores)
+  
+  #memory cleaning - prevents abort?
+  out1 <- out
+  rm(out)
+  
+  ## change format to return as list of rasters in correct orientation
+  out1 = lapply(out1, function(i){
+    raster(t(as.matrix(i)))
   })
-  lapply(out, as.raster)
-  stack(out)
+  out1
 }
