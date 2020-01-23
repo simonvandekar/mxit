@@ -1,8 +1,4 @@
 #' Utilizes biasCorrect.R to experiment and work with IHC.
-#'
-#'
-#'
-#'
 
 ## ---- DATA
 
@@ -36,6 +32,8 @@ setwd("~/Documents/Current/Research/mxit/R")
 source("biasCorrect.R")
 source("imageDensity.R")
 source("plotDensity.R")
+source("imageDelta.R")
+
 
 ## ----- ALL TEST IMAGES
 
@@ -80,10 +78,11 @@ plotDensity(imgs)
 
 ### --- WORKING TEST EXAMPLE (NO BIAS CORRECTION)
 
-i1 = imgs.test[1]; m1 = masks.test[1]
-i2 = imgs.test[2]; m2 = masks.test[2]
+i1 = imgs.test[1]
+m1 = masks.test[1]
+i2 = biasCorrect(i1,m1)
 
-d1 = imageDensity(i1,m1); d2 = imageDensity(i2,m2)
+d1 = imageDensity(i1,m1); d2 = imageDensity(i2,m1)
 attr(d2,"name") <- attr(d1,"name")
 attr(d2,"bias_correct") <- TRUE
 
