@@ -17,7 +17,16 @@
 #' @importFrom mixtools gammamixEM
 #' @importFrom parallel mclapply
 #' @export
-fitmix = function(image, mask, lambda=NULL, k=3, alpha=c(.333, 3.33, 33.3), beta=c(c(.222, 2.22, 22.2)), mc.cores=getOption("mc.cores", 2L), subsamp=1, maxpix=NULL, ...){
+fitmix = function(image, 
+                  mask, 
+                  lambda=NULL, 
+                  k=3, 
+                  alpha=c(.333, 3.33, 33.3), 
+                  beta=c(c(.222, 2.22, 22.2)), 
+                  mc.cores=getOption("mc.cores", 2L), 
+                  subsamp=1, 
+                  maxpix=NULL, 
+                  ...){
   if(all(is.character(image))) image = raster::stack(image)
   # will error if multiple masks are passed
   if(all(is.character(mask))) mask = raster::raster(mask)
@@ -28,7 +37,11 @@ fitmix = function(image, mask, lambda=NULL, k=3, alpha=c(.333, 3.33, 33.3), beta
     if(nx>maxpix) nx = maxpix
     x = sample(x, size=nx, replace=FALSE)
     # this doesn't work real well
-    mixfit = mixtools::gammamixEM(x, lambda=lambda, alpha=alpha, beta=beta, k=k)
+    mixfit = mixtools::gammamixEM(x, 
+                                  lambda=lambda, 
+                                  alpha=alpha, 
+                                  beta=beta, 
+                                  k=k)
     }, mc.cores = mc.cores)
 
 }

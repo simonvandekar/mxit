@@ -34,9 +34,11 @@ imageDensity = function(img,
       ## --- BREAK POINT --- (e.g. high computation time)
       vals = img[ mask!=0] ## subset image values only where mask exists
       if(logIt){
-        out = density(log(vals/mean(vals))) #calculate log density
+        out = density(log(vals/mean(vals))+1) #calculate log density
+        attr(out,"logged") = TRUE
       } else{
         out = density(vals/mean(vals)) ## calculate reg density
+        attr(out,"logged") = FALSE
       }
       attr(out,"name") = img_name
       attr(out,"bias_correct") = bias_corrected

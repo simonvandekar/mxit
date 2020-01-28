@@ -7,7 +7,12 @@
 #' @importFrom viridis viridis
 #' @export
 plotDensity = function(dat){
-  if(length(dat) > 1){
+  if(!is.null(attr(dat,"logged"))){
+    axis.txt = "Log Image Intensity"
+  } else{
+    axis.txt = "Image Intensity"
+  }
+  if(length(dat) > 1 & is.null(attr(dat,"class"))){
     #combine data into one nice ggplot set
     plot_dat = data.frame()
     for(i in 1:length(dat)){
@@ -32,14 +37,17 @@ plotDensity = function(dat){
     colnames(plot_dat) = c("x",
                            "y",
                            "bias_correct")
-    nameval = attr(dat, "name")
+    plot_dat$name = attr(dat, "name")
+    plot_dat$bias_correct = factor(ifelse(plot_dat$bias_correct==1,
+                                          "Yes",
+                                          "No"),
+                                   levels = c("Yes","No"))
   }
   
   ggplot(plot_dat) +
     geom_line(aes(x=x,y=y,color=bias_correct),size=1.2) +
     theme_minimal()+
-    scale_x_continuous("Image Intensity",
-                       limits = c(0,quantile(plot_dat$x,c(0.10))))+
+    scale_x_continuous(axis.txt)+
     scale_y_continuous("Density") +
     facet_wrap(~name) +
     scale_color_manual("Bias Corrected",

@@ -34,6 +34,12 @@ source("imageDensity.R")
 source("plotDensity.R")
 source("imageDelta.R")
 
+image = imgs.test[i]
+mask = masks.test[i]
+
+dens = imageDensity(image,mask)
+p = plotDensity(dens)
+p
 
 ## ----- ALL TEST IMAGES
 
@@ -59,9 +65,9 @@ for(i in 1:length(imgs.test)){
   
   #find deltas
   img_bc = biasCorrect(imgs.test[i],
-                       masks.test[i],
+                       mask,
                        simple=TRUE,
-                       splineParam = 5000)
+                       splineParam = 2000)
   
   img_og = raster(as.matrix(raster(imgs.test[i])))
   name_var = stringr::str_extract(imgs.test[i],"[ \\w-]+?(?=\\.)")

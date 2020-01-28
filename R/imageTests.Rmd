@@ -1,0 +1,126 @@
+---
+title: "pictures"
+author: "Coleman Harris"
+date: "1/28/2020"
+output: html_document
+---
+
+```{r}
+require(stringr)
+path.imgs = "~/Box/multiplex/MxIF\ Data/150000602136/AFRemoved"
+path.masks = "~/Box/multiplex/MxIF\ Data/150000602136/SegQuant/EpiMask"
+imgs.test = list.files(path.imgs,pattern="tif$",full.names = TRUE,recursive = TRUE)
+masks.test = list.files(path.masks,pattern="png$",full.names = TRUE,recursive = TRUE)
+
+getMask = function(img){
+  x2 = str_locate(img,".tif")[1]
+  maskNum = substr(img,x2-3,x2-1)
+  paste0(path.masks,
+         "/EpiMask_",
+         maskNum,
+         ".png")
+}
+
+## i=213 or i=1
+i = 213
+image = raster::stack(imgs.test[i])
+maskPath = getMask(imgs.test[i])
+mask = raster::raster(maskPath)
+x = image[mask!=0]
+
+# fit1 = Mclust(x1,
+#               G=3)
+
+fit2 = normalmixEM(x,k = 3,fast = TRUE)
+plot(fit2,2)
+dens.old = density(x)
+lines(dens.old,col="purple")
+
+i = 1
+image = raster::stack(imgs.test[i])
+maskPath = getMask(imgs.test[i])
+mask = raster::raster(maskPath)
+x.new = image[mask!=0]
+# plot(fit2,2)
+# lines(density(x.new),col="purple")
+
+dens.new = density(x.new)
+lines(dens.new,col="orange")
+
+### MIGHT BE COHERENT
+
+i.p = 0 # intensity value
+del = abs(dens.new$x - i.p) # compare xvals to intensity val
+cdf.del = dens.new$y[which(del==min(del))] # find density at closest data value
+del2 = abs(dens.old$y - cdf.del) # compare density in model space to data space
+dens.old$x[which(del2==min(del2))] # find corresponding model value for density
+
+# gMix = GaussianMixtures(maxNumComponents = 10,
+#                         phi = 1)
+# set.seed(1717)
+# m = sBIC(x,gMix)
+
+lamdas = data.frame()
+mus = data.frame()
+sigmas = data.frame()
+
+for(i in 1:10){
+  image = raster::stack(imgs.test[i])
+  maskPath = getMask(imgs.test[i])
+  if(file.exists(maskPath)){
+    mask = raster::raster(maskPath)
+    x = image[mask!=0]
+    fit2 = normalmixEM(x,k = 3,fast = TRUE)
+    lambdas = rbind(lambdas,c(fit2$lambda,i))
+    mus = rbind(mus,c(fit2$mu,i))
+    sigmas = rbind(sigmas,c(fit2$sigma,i))
+  }
+  print(i)
+}
+
+image.norm = matrix(NA,
+                    nrow=nrow(image),
+                    ncol=ncol(image))
+
+normalizer = function(i.p,
+                      mu.vec = c(18.8,126.6,250.2),
+                      sig.vec = c(8.5,53.1,125.8),
+                      lambda.vec = c(.11,.86,.04)){
+  #check which is closest, e.g. assumed dist the val comes from
+  # del = abs(mu.vec-i.p)
+  # idx = which(del == min(del))
+  # mu.asm = mu.vec[idx]
+  # sd.asm = sig.vec[idx]
+  # 
+  lambda.vec[1] * qnorm(p = pnorm(q = i.p,mean = mu.vec[1],sd = sig.vec[1]),
+                        mean = mu.vec[1],
+                        sd = sig.vec[1]) +
+    lambda.vec[2] * qnorm(p = pnorm(q = i.p,mean = mu.vec[2],sd = sig.vec[2]),
+                        mean = mu.vec[2],
+                        sd = sig.vec[2]) +
+    lambda.vec[3] * qnorm(p = pnorm(q = i.p, mean = mu.vec[3],sd = sig.vec[3]),
+                        mean = mu.vec[3],
+                        sd = sig.vec[3])
+}
+
+for(i in 1:nrow(image)){
+  for(j in 1:ncol(image)){
+    # if(mask[i,j] != 0){
+    #   image.norm[i,j] = 1
+    # } else{
+    #   image.norm[i,j] = image[i,j]
+    # }
+    image.norm[i,j] = normalizer(image[i,j])
+  }
+  if(i==j){print(i/2048)}
+}
+
+for(k in 1:length(x)){
+  xp[k] = normalizer(x)
+  if(k%%100==0) print(i)
+}
+
+
+
+```
+
