@@ -1,0 +1,121 @@
+---
+title: "Bias Correction"
+author: "Simon Vandekar"
+date: "4/8/2020"
+output: html_document
+---
+
+## Setup data
+
+```{r setup}
+
+## KNITR OPTIONS
+knitr::opts_chunk$set(echo = FALSE, message = FALSE)
+
+## LIBRARIES
+library(raster)
+devtools::load_all('~/code/mxit')
+
+
+datadir = '~/Box Sync/work/multiplex/MxIF Data'
+outdir = '~/Desktop/images'
+dir.create(outdir, showWarnings = FALSE)
+slides = read.csv(file.path(datadir, 'slide IDs.csv'))
+# get markers obtained from image names
+slides$markers = lapply(slides$slideID, function(x){
+  fls=list.files(path=file.path(datadir, x, 'AFRemoved'), pattern='000\\.tif?$')
+  unique(sapply(strsplit(fls, split = '_'), function(y) y[1]) )
+})
+slides$Pos = formatC(slides$Pos, width=3, format='d', flag='0')
+# markers obtained in all samples
+markers = Reduce(intersect, slides$markers)
+
+# get image directories
+slides[,markers] = lapply(markers, function(marker) file.path(datadir, slides$slideID, 'AFRemoved', paste0(marker, '_AFRemoved_', slides$Pos, '.tif')) )
+# checks that all of those directories were constructed correctly
+# all(file.exists(unlist(slides[,markers])))
+# get tissue masks, assumes png
+slides$epiMask = file.path(datadir, slides$slideID, 'SegQuant/EpiMask', paste0('EpiMask_', slides$Pos, '.png'))
+slides$epiMask = ifelse(file.exists(slides$epiMask), slides$epiMask, NA)
+slides$tumorMask = file.path(datadir, slides$slideID, 'SegQuant/TumorMask', paste0('TumorMask_', slides$Pos, '.png') )
+slides$tumorMask = ifelse(file.exists(slides$tumorMask), slides$tumorMask, NA)
+
+```
+
+
+## Inhomogeneity Correction
+
+```{r, eval=TRUE, echo=FALSE, cache=TRUE}
+
+config = list(names=c('n4ITK', 'SBC BAM', 'SBC LM'),
+  func=c('n4.wrap', 'sbc.bam.wrap', 'sbc.lm.wrap'),
+  args = list('n4.wrap'=list(returnBiasField=TRUE),
+              'sbc.bam.wrap'=list(),
+              'sbc.lm.wrap'=list())
+)
+
+# wrapper functions
+n4.wrap = function(image, ...){
+  n4time = system.time(n4res <-n4(slide))
+  n4bias = n4(slide, returnBiasField=TRUE )
+  n4res = list(uncorrupted=n4res, field=n4bias, time=n4time)
+}
+sbc.bam.wrap = function(image, ...){
+  bamtime = system.time(bamres <- sbc.bam(slide))
+  c(bamres, list(bamtime))
+}
+
+sbc.lm.wrap = function(image, ...){
+  lmtime = system.time(lmres <- sbc.lm(slide))
+  c(lmres, time=list(lmtime))
+}
+
+slide = slides$LYZ[100]
+img = raster(slide)
+dims = dim(img)
+
+
+results = lapply(config$func, function(func){do.call(eval(parse(text=func)), args = c(image=slide, config$args[[func]])) })
+names(results) = config$func
+# n4 bias correction
+#n4out = file.path(outdir, paste0(c('n4_', 'n4_field_'), basename(slide)) )
+#writeRaster(n4res, file=n4out[1], overwrite=TRUE)
+#writeRaster(n4bias, file=n4out[2], overwrite=TRUE)
+# bam bias correction
+#bamout = file.path(outdir, paste0(c('bam_', 'bam_field_'), basename(slide)) )
+#writeRaster(bamres[[1]], file=bamout[1], overwrite=TRUE)
+#writeRaster(bamres[[2]], file=bamout[2], overwrite=TRUE)
+# lm bias correction
+#lmout = file.path(outdir, paste0(c('lm_', 'lm_field_'), basename(slide)) )
+#writeRaster(lmres[[1]], file=lmout[1], overwrite=TRUE)
+#writeRaster(lmres[[2]], file=lmout[2], overwrite=TRUE)
+```
+
+
+```{r}
+cex=1.5
+par(mgp=c(1.7,.7,0), lwd=1.5, lend=2, cex.lab=0.8*cex, cex.axis=0.8*cex, cex.main=1*cex, mfrow=c(1,1), mar=c(2.8,2.8,1.8,.2))
+ncols = 128
+colors = gray(seq(0,1, length.out=ncols))
+#colors = hcl.colors(ncols, "viridis", rev = TRUE)
+maximum = sapply(results, function(x) cellStats(x[[2]], 'range'))
+maximum = max(maximum[2,]/maximum[1,])
+breaks = seq(1, maximum, length.out = ncols+1)
+trash = sapply(1:length(config$names), function(xind){
+  image(results[[xind]][[2]]/cellStats(results[[xind]][[2]], 'min'), col=colors,
+        xlim=c(1, dims[1]), ylim=c(1,dims[2]), breaks=breaks, main=config$names[xind]
+        )})
+```
+
+```{r}
+cex=1.5
+par(mgp=c(1.7,.7,0), lwd=1.5, lend=2, cex.lab=0.8*cex, cex.axis=0.8*cex, cex.main=1*cex, mfrow=c(1,1), mar=c(2.8,2.8,1.8,.2))
+ncols = 128
+colors = gray(seq(0,1, length.out=ncols))
+trash = sapply(1:length(config$names), function(xind){
+  lims = cellStats(results[[xind]][[1]], stat=function(x, na.rm) quantile(x, probs=c(0,0.95,1), na.rm=na.rm) )
+  breaks = c(lims[1], seq(0, lims[2], length.out = ncols-1), lims[3] )
+  image(results[[xind]][[1]], col=colors,
+        xlim=c(1, dims[1]), ylim=c(1,dims[2]), breaks=breaks, main=config$names[xind]
+        )})
+```
